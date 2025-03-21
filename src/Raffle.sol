@@ -125,7 +125,7 @@ contract Raffle is VRFConsumerBaseV2 {
         );
         if (!success) {
             // 失败的话回滚
-            // revert Raffe__TransferFaild();
+            revert Raffe__TransferFaild();
         }
     }
 
