@@ -66,7 +66,6 @@ contract Raffle is VRFConsumerBaseV2 {
     bytes32 private immutable i_gasLane;
     uint64 private immutable i_subscriptionId;
     uint32 private immutable i_callbackGasLimit;
-
     // storage上记录参与者，因为最终其中中奖的人需要得到奖池的token 因此必须是payable修饰
     address payable[] private s_players;
     uint256 private s_lastTimeStamp;
