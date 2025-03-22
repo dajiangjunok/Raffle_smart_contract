@@ -56,7 +56,7 @@ contract Raffle is VRFConsumerBaseV2 {
      * @dev Emitted when a player enters the raffle.
      * @param player The address of the player who entered the raffle.
      */
-    event EnterRaffle(address indexed player);
+    event EnteredRaffle(address indexed player);
     event WinnerPicked(address indexed winner);
 
     uint256 private immutable i_entranceFee; // 参与价格
@@ -106,7 +106,7 @@ contract Raffle is VRFConsumerBaseV2 {
         // 1.Makes migration easier
         // 2.Makes front end "indexing" easier
         // Emit an event to notify that a player has entered the raffle
-        emit EnterRaffle(msg.sender);
+        emit EnteredRaffle(msg.sender);
     }
 
     /**
@@ -195,5 +195,9 @@ contract Raffle is VRFConsumerBaseV2 {
 
     function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
+    }
+
+    function getPlayer(uint256 index) external view returns (address) {
+        return s_players[index];
     }
 }
