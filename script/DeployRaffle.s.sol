@@ -5,7 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {CreateSubscription} from "./Interactions.s.sol";
+import {CreateSubscription, FundSubscription, FundConsumer} from "./Interactions.s.sol";
 
 contract DeployRaffle is Script {
     function run() external returns (Raffle, HelperConfig) {
@@ -16,7 +16,8 @@ contract DeployRaffle is Script {
             address _vrfCoordinator,
             bytes32 _gasLane,
             uint64 _subscriptionId,
-            uint32 _callbackGasLimit
+            uint32 _callbackGasLimit,
+            address _link
         ) = helperConfig.activeNetworkConfig();
 
         if (_subscriptionId == 0) {
@@ -29,6 +30,12 @@ contract DeployRaffle is Script {
             );
 
             // fund it!
+            FundSubscription fundSubscription = new FundSubscription();
+            fundSubscription.fundSubscription(
+                _vrfCoordinator,
+                _subscriptionId,
+                _link
+            );
         }
 
         vm.startBroadcast();
@@ -38,9 +45,17 @@ contract DeployRaffle is Script {
             _vrfCoordinator,
             _gasLane,
             _subscriptionId,
-            _callbackGasLimit
+            _callbackGasLimit,
+            _link
         );
         vm.stopBroadcast();
+
+        FundConsumer addConsumer = new FundConsumer();
+        addConsumer.addConsumer(
+            address(raffle),
+            _vrfCoordinator,
+            _subscriptionId
+        );
 
         return (raffle, helperConfig);
     }

@@ -19,6 +19,7 @@ contract RaffleTest is Test {
     bytes32 _gasLane;
     uint64 _subscriptionId;
     uint32 _callbackGasLimit;
+    address _link;
 
     address public PLAYER = makeAddr("player"); // cheatCodes
     uint256 public constant STARTING_USER_BALANCE = 10 ether; // 用于初始化测试用户的余额
@@ -33,7 +34,8 @@ contract RaffleTest is Test {
             _vrfCoordinator,
             _gasLane,
             _subscriptionId,
-            _callbackGasLimit
+            _callbackGasLimit,
+            _link
         ) = helperConfig.activeNetworkConfig();
 
         // 初始化给这些测试玩家一些tokens
