@@ -48,6 +48,7 @@ contract RaffleTest is Test {
     /////////////////////////
     // enterRaffle Tests   //
     /////////////////////////
+    // 测试用户参与抽奖费用不足情况
     function testRaffleRevertsWhenYouDontPayEnough() public {
         // Arrange
         vm.prank(PLAYER);
@@ -64,6 +65,7 @@ contract RaffleTest is Test {
     //     // Act / Assert
     // }
 
+    // 测试用户成功参与抽奖
     function testRaffleRecordsPlayerWhenTheyEnter() public {
         // Arrange
         vm.prank(PLAYER);
@@ -73,6 +75,7 @@ contract RaffleTest is Test {
         assert(raffle.getPlayer(0) == PLAYER);
     }
 
+    // 测试用户参与抽奖后，触发事件
     function testRaffleEmitsEventOnEnter() public {
         // Arrange
         vm.prank(PLAYER); // 指定接下来合约的调用者为模拟的用户

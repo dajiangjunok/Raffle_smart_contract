@@ -12,6 +12,7 @@ contract HelperConfig is Script {
         bytes32 _gasLane; // key hash
         uint64 _subscriptionId;
         uint32 _callbackGasLimit;
+        address _link;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -33,7 +34,8 @@ contract HelperConfig is Script {
                 _vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
                 _gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
                 _subscriptionId: 0, // update this with our subId
-                _callbackGasLimit: 500000
+                _callbackGasLimit: 500000,
+                _link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
             });
     }
 
@@ -58,7 +60,8 @@ contract HelperConfig is Script {
                 _vrfCoordinator: address(vrfCoordinatorV2Mock),
                 _gasLane: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c,
                 _subscriptionId: 0, // our script will add this
-                _callbackGasLimit: 500000
+                _callbackGasLimit: 500000,
+                _link: 0x110F1B6A0369C40aEf7afDf7C6B08c7a1ceE9C51
             });
     }
 }
