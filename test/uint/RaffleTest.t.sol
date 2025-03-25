@@ -3,8 +3,9 @@ pragma solidity ^0.8.19;
 
 import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {Raffle} from "../../src/Raffle.sol";
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract RaffleTest is Test {
     /* Events */
@@ -63,7 +64,6 @@ contract RaffleTest is Test {
     // function testRaffleIsNotOpenState( ) public {
     //     // Arrange
     //     vm.prank(PLAYER);
-
     //     // Act / Assert
     // }
 
@@ -89,15 +89,110 @@ contract RaffleTest is Test {
     }
 
     // 测试当raffle状态不为OPEN时，用户发送入库
-    function testCantEnterWhenRaffleIsNotOpen() public {
-        vm.prank(PLAYER);
-        raffle.enterRaffle{value: _entranceFee}();
-        vm.warp(block.timestamp + _interval + 1); // 快进时间(快进_interval + 1)百分比超过开奖时间
-        vm.roll(block.number + 1); // 递增区块
+    function testCantEnterWhenRaffleIsNotOpen()
+        public
+        raffleEnteredAndTimePassed
+    {
         raffle.performUpkeep(""); // 执行开奖
 
         vm.expectRevert(Raffle.Raffle_RaffleNotOpen.selector);
         vm.prank(PLAYER);
         raffle.enterRaffle{value: _entranceFee}();
+    }
+
+    /////////////////////////
+    // checkUpkeep Tests   //
+    /////////////////////////
+
+    // 测试checkUpkeep返回账户资金不足返回false的情况
+    function testCheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        // Arrange
+        vm.warp(block.timestamp + _interval + 1); // 快进时间(快进_interval + 1)百分比超过开奖时间
+        vm.roll(block.number + 1); // 递增区块
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep(""); // 调用checkUpkeep函数
+        // Assert
+        assert(!upkeepNeeded); // 断言upkeepNeeded为false
+    }
+
+    // 测试当时间间隔不足时checkUpkeep返回false的情况
+    function testCheckUpkeepReturnsFalseIfEnoughTimeHasNotPassed() public {
+        // Arrange
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: _entranceFee}(); // 调用主合约的 enterRaffle 函数，从而触发事件
+        // vm.roll(block.number + 1); // 递增区块
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep(""); // 调用checkUpkeep函数
+        // Assert
+        assert(!upkeepNeeded); // 断言upkeepNeeded为false
+    }
+
+    // 测试当所有参数都满足条件时checkUpkeep返回true的情况
+    function testCheckUpkeepReturnsTrueWhenParamsAreGood()
+        public
+        raffleEnteredAndTimePassed
+    {
+        // Arrange Modifier
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep(""); // 调用checkUpkeep函数
+        // Assert
+        assert(upkeepNeeded); // 断言upkeepNeeded为true
+    }
+
+    /////////////////////////
+    // performUpkeep Tests //
+    /////////////////////////
+
+    // 测试performUpkeep可以运行
+    function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue()
+        public
+        raffleEnteredAndTimePassed
+    {
+        // Arrange
+        // Act / Assert
+        raffle.performUpkeep(""); // 调用performUpkeep函数
+    }
+
+    // 测试performUpkeep回滚
+    function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
+        // Arrange
+        uint256 currentBalance = 0;
+        uint256 numPlayers = 0;
+        Raffle.RaffleState rState = raffle.getRaffleState();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Raffle.Raffle_UpkeepNotNeeded.selector,
+                currentBalance,
+                numPlayers,
+                rState
+            )
+        );
+        // Act / Assert
+        raffle.performUpkeep(""); // 调用performUpkeep函数
+    }
+
+    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestId()
+        public
+        raffleEnteredAndTimePassed
+    {
+        // Arrange
+        vm.recordLogs();
+        raffle.performUpkeep(""); // 调用performUpkeep函数,发送事件得到requestId
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Act
+        bytes32 requestId = entries[1].topics[1]; // 第一个事件是requestRandomWords发出的,此处我们重新有发送，topics第0个参数是整个事件
+        console.log("topics[0]:", vm.toString(entries[1].topics[0]));
+        console.log("topics[1]:", vm.toString(entries[1].topics[1]));
+        // Assert
+        assert(uint256(requestId) > 0); // 断言requestId大于0
+    }
+
+    modifier raffleEnteredAndTimePassed() {
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: _entranceFee}(); // 调用主合约的 enterRaffle 函数，从而触发事件
+        vm.warp(block.timestamp + _interval + 1); // 快进时间(快进_interval + 1)百分比超过开奖时间
+        vm.roll(block.number + 1); // 递增区块
+        _;
     }
 }

@@ -7,6 +7,7 @@ import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/mocks/VRFCoord
 import {LinkToken} from "../test/mocks/LinkToken.sol";
 import {DevOpsTools} from "../lib/foundry-devops/src/DevOpsTools.sol";
 
+/**创建订阅 */
 contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint64) {
         HelperConfig helperConfig = new HelperConfig();
@@ -34,6 +35,7 @@ contract CreateSubscription is Script {
     }
 }
 
+/**为订阅提供资金 */
 contract FundSubscription is Script {
     uint96 public constant FUND_AMOUNT = 3 ether;
 
@@ -81,6 +83,7 @@ contract FundSubscription is Script {
     }
 }
 
+/**为合约添加消费者 */
 contract FundConsumer is Script {
     function addConsumer(
         address raffle,
@@ -108,5 +111,7 @@ contract FundConsumer is Script {
             "Raffle",
             block.chainid
         );
+
+        addConsumerUsingConfig(raffle);
     }
 }

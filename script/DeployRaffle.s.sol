@@ -29,7 +29,7 @@ contract DeployRaffle is Script {
                 _vrfCoordinator
             );
 
-            // fund it!
+            // Fund it!
             FundSubscription fundSubscription = new FundSubscription();
             fundSubscription.fundSubscription(
                 _vrfCoordinator,

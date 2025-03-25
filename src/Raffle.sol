@@ -58,6 +58,7 @@ contract Raffle is VRFConsumerBaseV2 {
      */
     event EnteredRaffle(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     uint256 private immutable i_entranceFee; // 参与价格
     // @dev Duration of the lottery in seconds
@@ -149,13 +150,16 @@ contract Raffle is VRFConsumerBaseV2 {
         s_raffleState = RaffleState.CALCULATING;
         // 1. request the RNG 请求随机数
         // 2. get the radom number 获取随机数
-        i_vrfCoordinator.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // gas lane
             i_subscriptionId, // 订阅ID，用于支付随机数生成费用
             REQUEST_CONFIRMATIONS, // 请求确认数，确保随机数生成的安全性requestConfirmations
             i_callbackGasLimit, // 回调函数的最大Gas限制
             NUM_WORDS // 请求的随机数数量
         );
+
+        // Quiz: How do we get a random number?
+        emit RequestedRaffleWinner(requestId);
     }
 
     // CEI: Check Effects Interactions (开发方式，步骤)
@@ -189,7 +193,7 @@ contract Raffle is VRFConsumerBaseV2 {
         emit WinnerPicked(s_recentWinner);
     }
 
-    /** getter function */
+    /** getter/view function */
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
     }
