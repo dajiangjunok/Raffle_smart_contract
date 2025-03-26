@@ -60,17 +60,17 @@ contract Raffle is VRFConsumerBaseV2 {
     event WinnerPicked(address indexed winner);
     event RequestedRaffleWinner(uint256 indexed requestId);
 
-    uint256 private immutable i_entranceFee; // 参与价格
+    uint256 public immutable i_entranceFee; // 参与价格
     // @dev Duration of the lottery in seconds
     uint256 private immutable i_interval; // 开奖的时间间隔
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
-    bytes32 private immutable i_gasLane;
-    uint64 private immutable i_subscriptionId;
+    bytes32 private immutable i_gasLane; // chainlink VRF keyhash
+    uint64 private immutable i_subscriptionId; // chainlink VRF subscriptionId
     uint32 private immutable i_callbackGasLimit;
     // storage上记录参与者，因为最终其中中奖的人需要得到奖池的token 因此必须是payable修饰
-    address payable[] private s_players;
-    uint256 private s_lastTimeStamp;
-    address private s_recentWinner; // 近期获胜者
+    address payable[] public s_players;
+    uint256 public s_lastTimeStamp;
+    address public s_recentWinner; // 近期获胜者
     RaffleState private s_raffleState;
 
     constructor(
@@ -162,6 +162,7 @@ contract Raffle is VRFConsumerBaseV2 {
         emit RequestedRaffleWinner(requestId);
     }
 
+    // Raffle 继承了VRFConsumerBaseV2，这个函数在这里重写，会自动执行
     // CEI: Check Effects Interactions (开发方式，步骤)
     // 该函数调用chainlink 获取随机数， override重写这个函数
     function fulfillRandomWords(
@@ -204,5 +205,17 @@ contract Raffle is VRFConsumerBaseV2 {
 
     function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getRecentTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getLengthOfPlayers() external view returns (uint256) {
+        return s_players.length;
     }
 }

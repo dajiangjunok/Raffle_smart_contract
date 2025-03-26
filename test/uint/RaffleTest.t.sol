@@ -6,6 +6,7 @@ import {Raffle} from "../../src/Raffle.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 
 contract RaffleTest is Test {
     /* Events */
@@ -182,10 +183,76 @@ contract RaffleTest is Test {
         Vm.Log[] memory entries = vm.getRecordedLogs();
         // Act
         bytes32 requestId = entries[1].topics[1]; // 第一个事件是requestRandomWords发出的,此处我们重新有发送，topics第0个参数是整个事件
+        Raffle.RaffleState rState = raffle.getRaffleState();
         console.log("topics[0]:", vm.toString(entries[1].topics[0]));
         console.log("topics[1]:", vm.toString(entries[1].topics[1]));
         // Assert
         assert(uint256(requestId) > 0); // 断言requestId大于0
+        assert(uint256(rState) == 1); // 断言rState等于1
+    }
+
+    /////////////////////////
+    // fulfillRandomWords  //
+    /////////////////////////
+
+    // 测试fulfillRandomWords可以运行
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
+        uint256 randomNumber
+    ) public raffleEnteredAndTimePassed {
+        // Arrange
+        vm.expectRevert("nonexistent request");
+        VRFCoordinatorV2Mock(_vrfCoordinator).fulfillRandomWords(
+            randomNumber,
+            address(raffle)
+        );
+        // Act / Assert
+    }
+
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
+        public
+        raffleEnteredAndTimePassed
+    {
+        // Arrange
+        uint256 additionalEntrants = 5; // 添加5个额外的参与者
+        uint256 startingIndex = 1; // 从索引1开始(跳过modifier)
+        for (
+            uint256 i = startingIndex;
+            i < startingIndex + additionalEntrants;
+            i++
+        ) {
+            address player = address(uint160(i)); // 生成一个随机的玩家地址
+            hoax(player, STARTING_USER_BALANCE); // deal some ETH to player
+            raffle.enterRaffle{value: _entranceFee}(); // 调用主合约的 enterRaffle 函数，从而触发事件
+        }
+        // Act
+        vm.warp(block.timestamp + _interval + 1); // 快进时间(快进_interval + 1)百分比超过开奖时间
+        vm.roll(block.number + 1); // 递增区块
+        vm.recordLogs(); // 记录日志
+        raffle.performUpkeep(""); // 调用performUpkeep函数
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Act
+        bytes32 requestId = entries[1].topics[1]; // 第一个事件是requestRandomWords发出的,此处我们重新有发送，topics第0个参数是整个事件
+
+        uint256 previousTimeStamp = raffle.s_lastTimeStamp(); // 获取上一次的时间戳
+        uint256 prize = raffle.i_entranceFee() * (additionalEntrants + 1); // 计算总奖金
+        // 模拟链上调用
+        VRFCoordinatorV2Mock(_vrfCoordinator).fulfillRandomWords(
+            uint256(requestId),
+            address(raffle)
+        );
+
+        // Assert
+        assert(uint256(raffle.getRaffleState()) == 0); // 断言rState等于0
+        assert(raffle.getRecentWinner() != address(0)); // 断言recentWinner不等于0
+        assert(raffle.getLengthOfPlayers() == 0); // 断言players长度等于0
+        assert(raffle.getRecentTimeStamp() > previousTimeStamp); // 断言recentTimeStamp大于previousTimeStamp
+        console.log("winner:", uint256(raffle.getRecentWinner().balance));
+        console.log("prize:", prize);
+        console.log(STARTING_USER_BALANCE);
+        assert(
+            uint256(raffle.getRecentWinner().balance) ==
+                STARTING_USER_BALANCE + prize - raffle.i_entranceFee()
+        ); // 断言recentWinner的余额等于priz
     }
 
     modifier raffleEnteredAndTimePassed() {
