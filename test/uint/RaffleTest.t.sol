@@ -29,7 +29,6 @@ contract RaffleTest is Test {
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
         (raffle, helperConfig) = deployer.run();
-
         (
             _entranceFee,
             _interval,
@@ -37,7 +36,8 @@ contract RaffleTest is Test {
             _gasLane,
             _subscriptionId,
             _callbackGasLimit,
-            _link
+            _link,
+
         ) = helperConfig.activeNetworkConfig();
 
         // 初始化给这些测试玩家一些tokens
@@ -195,10 +195,15 @@ contract RaffleTest is Test {
     // fulfillRandomWords  //
     /////////////////////////
 
+    modifier skipFork() {
+        if (block.chainid != 31337) return;
+        _;
+    }
+
     // 测试fulfillRandomWords可以运行
     function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
         uint256 randomNumber
-    ) public raffleEnteredAndTimePassed {
+    ) public raffleEnteredAndTimePassed skipFork {
         // Arrange
         vm.expectRevert("nonexistent request");
         VRFCoordinatorV2Mock(_vrfCoordinator).fulfillRandomWords(
@@ -208,9 +213,11 @@ contract RaffleTest is Test {
         // Act / Assert
     }
 
+    //
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
         public
         raffleEnteredAndTimePassed
+        skipFork
     {
         // Arrange
         uint256 additionalEntrants = 5; // 添加5个额外的参与者
@@ -230,9 +237,8 @@ contract RaffleTest is Test {
         vm.recordLogs(); // 记录日志
         raffle.performUpkeep(""); // 调用performUpkeep函数
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        // Act
         bytes32 requestId = entries[1].topics[1]; // 第一个事件是requestRandomWords发出的,此处我们重新有发送，topics第0个参数是整个事件
-
+        // Act
         uint256 previousTimeStamp = raffle.s_lastTimeStamp(); // 获取上一次的时间戳
         uint256 prize = raffle.i_entranceFee() * (additionalEntrants + 1); // 计算总奖金
         // 模拟链上调用
@@ -252,7 +258,7 @@ contract RaffleTest is Test {
         assert(
             uint256(raffle.getRecentWinner().balance) ==
                 STARTING_USER_BALANCE + prize - raffle.i_entranceFee()
-        ); // 断言recentWinner的余额等于priz
+        );
     }
 
     modifier raffleEnteredAndTimePassed() {

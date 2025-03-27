@@ -88,7 +88,6 @@ contract Raffle is VRFConsumerBaseV2 {
         i_gasLane = _gasLane;
         i_subscriptionId = _subscriptionId;
         i_callbackGasLimit = _callbackGasLimit;
-
         s_lastTimeStamp = block.timestamp;
         s_raffleState = RaffleState.OPEN;
     }
