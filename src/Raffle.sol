@@ -22,8 +22,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 
 /**
  * @title A simple Raffle Contract
@@ -31,7 +32,7 @@ import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2
  * @notice  This contract is for creating a simple raffle
  * @dev Implements Chainlink VRFv2
  */
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle_NotEnoughEthSent();
     error Raffle_TransferFailed();
     error Raffle_RaffleNotOpen();
@@ -63,9 +64,9 @@ contract Raffle is VRFConsumerBaseV2 {
     uint256 public immutable i_entranceFee; // 参与价格
     // @dev Duration of the lottery in seconds
     uint256 private immutable i_interval; // 开奖的时间间隔
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
+    IVRFCoordinatorV2Plus private immutable i_vrfCoordinator;
     bytes32 private immutable i_gasLane; // chainlink VRF keyhash
-    uint64 private immutable i_subscriptionId; // chainlink VRF subscriptionId
+    uint256 private immutable i_subscriptionId; // chainlink VRF subscriptionId
     uint32 private immutable i_callbackGasLimit;
     // storage上记录参与者，因为最终其中中奖的人需要得到奖池的token 因此必须是payable修饰
     address payable[] public s_players;
@@ -78,13 +79,13 @@ contract Raffle is VRFConsumerBaseV2 {
         uint256 _interval,
         address _vrfCoordinator,
         bytes32 _gasLane,
-        uint64 _subscriptionId,
+        uint256 _subscriptionId,
         uint32 _callbackGasLimit,
-        address _link
-    ) VRFConsumerBaseV2(_vrfCoordinator) {
+        address /* _link */
+    ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         i_entranceFee = _entranceFee; // 定义参与价格
         i_interval = _interval;
-        i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
+        i_vrfCoordinator = IVRFCoordinatorV2Plus(_vrfCoordinator);
         i_gasLane = _gasLane;
         i_subscriptionId = _subscriptionId;
         i_callbackGasLimit = _callbackGasLimit;
@@ -149,24 +150,41 @@ contract Raffle is VRFConsumerBaseV2 {
         s_raffleState = RaffleState.CALCULATING;
         // 1. request the RNG 请求随机数
         // 2. get the radom number 获取随机数
+        // uint256 requestId = i_vrfCoordinator.requestRandomWords(
+        //     i_gasLane, // gas lane
+        //     i_subscriptionId, // 订阅ID，用于支付随机数生成费用
+        //     REQUEST_CONFIRMATIONS, // 请求确认数，确保随机数生成的安全性requestConfirmations
+        //     i_callbackGasLimit, // 回调函数的最大Gas限制
+        //     NUM_WORDS // 请求的随机数数量
+        // );
+
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_gasLane, // gas lane
-            i_subscriptionId, // 订阅ID，用于支付随机数生成费用
-            REQUEST_CONFIRMATIONS, // 请求确认数，确保随机数生成的安全性requestConfirmations
-            i_callbackGasLimit, // 回调函数的最大Gas限制
-            NUM_WORDS // 请求的随机数数量
-        );
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: i_gasLane,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            })
+        ); // 触发随机数生成
 
         // Quiz: How do we get a random number?
         emit RequestedRaffleWinner(requestId);
     }
 
-    // Raffle 继承了VRFConsumerBaseV2，这个函数在这里重写，会自动执行
+    // Assumes the subscription is funded sufficiently.
+    // @param enableNativePayment: Set to `true` to enable payment in native tokens, or
+    // `false` to pay in LINK
+
+    // Raffle 继承了VRFConsumerBaseV2Plus，这个函数在这里重写，会自动执行
     // CEI: Check Effects Interactions (开发方式，步骤)
     // 该函数调用chainlink 获取随机数， override重写这个函数
     function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] memory randomWords
+        uint256 /*requestId*/,
+        uint256[] calldata randomWords
     ) internal override {
         // Checks
         // Effects (Our own contract)

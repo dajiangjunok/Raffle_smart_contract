@@ -15,7 +15,7 @@ contract DeployRaffle is Script {
             uint256 _interval,
             address _vrfCoordinator,
             bytes32 _gasLane,
-            uint64 _subscriptionId,
+            uint256 _subscriptionId,
             uint32 _callbackGasLimit,
             address _link,
             uint256 _deployerKey

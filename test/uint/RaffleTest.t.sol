@@ -6,7 +6,7 @@ import {Raffle} from "../../src/Raffle.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     /* Events */
@@ -19,7 +19,7 @@ contract RaffleTest is Test {
     uint256 _interval;
     address _vrfCoordinator;
     bytes32 _gasLane;
-    uint64 _subscriptionId;
+    uint256 _subscriptionId;
     uint32 _callbackGasLimit;
     address _link;
 
@@ -205,8 +205,9 @@ contract RaffleTest is Test {
         uint256 randomNumber
     ) public raffleEnteredAndTimePassed skipFork {
         // Arrange
-        vm.expectRevert("nonexistent request");
-        VRFCoordinatorV2Mock(_vrfCoordinator).fulfillRandomWords(
+        // vm.expectRevert("nonexistent request");
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(_vrfCoordinator).fulfillRandomWords(
             randomNumber,
             address(raffle)
         );
@@ -222,6 +223,13 @@ contract RaffleTest is Test {
         // Arrange
         uint256 additionalEntrants = 5; // 添加5个额外的参与者
         uint256 startingIndex = 1; // 从索引1开始(跳过modifier)
+
+        uint256 FUND_AMOUNT = 1e20; // 充值100 LINK
+        VRFCoordinatorV2_5Mock(_vrfCoordinator).fundSubscription(
+            _subscriptionId,
+            FUND_AMOUNT
+        );
+
         for (
             uint256 i = startingIndex;
             i < startingIndex + additionalEntrants;
@@ -229,6 +237,7 @@ contract RaffleTest is Test {
         ) {
             address player = address(uint160(i)); // 生成一个随机的玩家地址
             hoax(player, STARTING_USER_BALANCE); // deal some ETH to player
+
             raffle.enterRaffle{value: _entranceFee}(); // 调用主合约的 enterRaffle 函数，从而触发事件
         }
         // Act
@@ -242,7 +251,7 @@ contract RaffleTest is Test {
         uint256 previousTimeStamp = raffle.s_lastTimeStamp(); // 获取上一次的时间戳
         uint256 prize = raffle.i_entranceFee() * (additionalEntrants + 1); // 计算总奖金
         // 模拟链上调用
-        VRFCoordinatorV2Mock(_vrfCoordinator).fulfillRandomWords(
+        VRFCoordinatorV2_5Mock(_vrfCoordinator).fulfillRandomWords(
             uint256(requestId),
             address(raffle)
         );
