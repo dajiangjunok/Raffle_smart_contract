@@ -47,7 +47,7 @@ contract CreateSubscription is Script {
 
 /**为订阅提供资金 */
 contract FundSubscription is Script {
-    uint96 public constant FUND_AMOUNT = 3 ether;
+    uint256 public constant FUND_AMOUNT = 3 ether;
 
     function fundSubscriptionUsingConfig() public {
         // HelperConfig helperConfig = new HelperConfig();

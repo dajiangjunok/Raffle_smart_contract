@@ -25,6 +25,7 @@ pragma solidity ^0.8.19;
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 
 /**
  * @title A simple Raffle Contract
@@ -32,7 +33,7 @@ import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/inter
  * @notice  This contract is for creating a simple raffle
  * @dev Implements Chainlink VRFv2
  */
-contract Raffle is VRFConsumerBaseV2Plus {
+contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
     error Raffle_NotEnoughEthSent();
     error Raffle_TransferFailed();
     error Raffle_RaffleNotOpen();
@@ -74,6 +75,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
     address public s_recentWinner; // 近期获胜者
     RaffleState private s_raffleState;
 
+    mapping(uint256 => address) private s_rollers;
+    mapping(address => uint256) private s_results;
+
     constructor(
         uint256 _entranceFee,
         uint256 _interval,
@@ -83,6 +87,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint32 _callbackGasLimit,
         address /* _link */
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
+        // 继承了VRFConsumerBaseV2Plus，往该继承合约构造函数中传入参数
         i_entranceFee = _entranceFee; // 定义参与价格
         i_interval = _interval;
         i_vrfCoordinator = IVRFCoordinatorV2Plus(_vrfCoordinator);

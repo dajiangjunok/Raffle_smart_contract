@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {Raffle} from "../../src/Raffle.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test, console, console2} from "forge-std/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
@@ -196,7 +196,9 @@ contract RaffleTest is Test {
     /////////////////////////
 
     modifier skipFork() {
-        if (block.chainid != 31337) return;
+        if (block.chainid != 31337) {
+            return;
+        }
         _;
     }
 
@@ -221,14 +223,15 @@ contract RaffleTest is Test {
         skipFork
     {
         // Arrange
-        uint256 additionalEntrants = 5; // 添加5个额外的参与者
+        uint256 additionalEntrants = 3; // 添加5个额外的参与者
         uint256 startingIndex = 1; // 从索引1开始(跳过modifier)
+        uint256 previousTimeStamp = raffle.s_lastTimeStamp(); // 获取上一次的时间戳
 
-        uint256 FUND_AMOUNT = 1e20; // 充值100 LINK
-        VRFCoordinatorV2_5Mock(_vrfCoordinator).fundSubscription(
-            _subscriptionId,
-            FUND_AMOUNT
-        );
+        // uint256 FUND_AMOUNT = 2 ether;
+        // VRFCoordinatorV2_5Mock(_vrfCoordinator).fundSubscription(
+        //     _subscriptionId,
+        //     FUND_AMOUNT
+        // );
 
         for (
             uint256 i = startingIndex;
@@ -241,21 +244,17 @@ contract RaffleTest is Test {
             raffle.enterRaffle{value: _entranceFee}(); // 调用主合约的 enterRaffle 函数，从而触发事件
         }
         // Act
-        vm.warp(block.timestamp + _interval + 1); // 快进时间(快进_interval + 1)百分比超过开奖时间
-        vm.roll(block.number + 1); // 递增区块
+
         vm.recordLogs(); // 记录日志
         raffle.performUpkeep(""); // 调用performUpkeep函数
         Vm.Log[] memory entries = vm.getRecordedLogs();
+        console2.logBytes32(entries[1].topics[1]);
         bytes32 requestId = entries[1].topics[1]; // 第一个事件是requestRandomWords发出的,此处我们重新有发送，topics第0个参数是整个事件
-        // Act
-        uint256 previousTimeStamp = raffle.s_lastTimeStamp(); // 获取上一次的时间戳
-        uint256 prize = raffle.i_entranceFee() * (additionalEntrants + 1); // 计算总奖金
-        // 模拟链上调用
         VRFCoordinatorV2_5Mock(_vrfCoordinator).fulfillRandomWords(
             uint256(requestId),
             address(raffle)
         );
-
+        uint256 prize = raffle.i_entranceFee() * (additionalEntrants + 1); // 计算总奖金
         // Assert
         assert(uint256(raffle.getRaffleState()) == 0); // 断言rState等于0
         assert(raffle.getRecentWinner() != address(0)); // 断言recentWinner不等于0

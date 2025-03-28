@@ -66,7 +66,7 @@ contract HelperConfig is Script {
         VRFCoordinatorV2_5Mock vrfCoordinatorV2Mock = new VRFCoordinatorV2_5Mock(
                 baseFee,
                 gasPriceLink,
-                1e9
+                2e18
             );
         LinkToken link = new LinkToken();
         vm.stopBroadcast();
