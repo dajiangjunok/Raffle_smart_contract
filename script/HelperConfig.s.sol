@@ -2,7 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
-import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+// import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
 
 contract HelperConfig is Script {
@@ -11,7 +12,7 @@ contract HelperConfig is Script {
         uint256 _interval; // 抽奖时间间隔
         address _vrfCoordinator;
         bytes32 _gasLane; // key hash
-        uint64 _subscriptionId; // 订阅id
+        uint256 _subscriptionId; // 订阅id
         uint32 _callbackGasLimit;
         address _link;
         uint256 _deployerKey; // deployer私钥
@@ -62,10 +63,11 @@ contract HelperConfig is Script {
         uint96 gasPriceLink = 1e9; // 1 gwei
 
         vm.startBroadcast();
-        VRFCoordinatorV2Mock vrfCoordinatorV2Mock = new VRFCoordinatorV2Mock(
-            baseFee,
-            gasPriceLink
-        );
+        VRFCoordinatorV2_5Mock vrfCoordinatorV2Mock = new VRFCoordinatorV2_5Mock(
+                baseFee,
+                gasPriceLink,
+                2e18
+            );
         LinkToken link = new LinkToken();
         vm.stopBroadcast();
         return
